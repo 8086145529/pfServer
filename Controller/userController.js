@@ -1,11 +1,11 @@
 const users = require('../Models/userSchema')
-
-// register// oru user register cheyunna samayath nadkkunna karyangal
+const jwt = require('jsonwebtoken')
+// register// oru user register cheyunna samayath nadkkunna karyangal and frontendilek enthokke response kodukkanam
 exports.register = async(req,res)=>{
     console.log('Inside register controller function');
     // res.status(200).json("Register Request received")
-    const {username,email,password} = req.body
-    try{
+    const {username,email,password} = req.body // means requestinte bodyil ninnum user kodutha datas extract cheyth edukkuka
+    try{// api call cheyumbol error varunnathine
         const existingUser = await users.findOne({email})// findOne 2 karyangal mathrame return cheyannula possibility ollu.1.aayalude full detail(an object) 2.Angane oral illenkil null ennum return cheyum(MongoDB compassil kandath pole) // users.findOne({email}) means both keyname and value name are same.i.e {email:email}.ivide email mathram use cheyan karanam,user kodukkuna unique aayittula ore oru data mathrame ollu ath email aan.so existing user aano enn kand pidikan,ith use cheythal mathi.but loginteth ithupole existing user aano enn check cheyan email and password venam.
         if(existingUser){ // so existingUser undenkil,i.e already oru user with ee object detail, MongoDBil stored aan,i.e already ayal register button click  cheyth account create cheythittund
             res.status(406).json("Account already exists!!! Please Login...")// 400 series status code means client error, 406 means 
@@ -18,7 +18,7 @@ exports.register = async(req,res)=>{
         }
     }
     catch(err){
-        res.status(401).json(`Register API Failed : ${err}`)
+        res.status(401).json(`Register API Failed : ${err}`)// means 401 error vannal athinte meaning ee server folderil aan error ennan
     }
 
 }
@@ -26,19 +26,37 @@ exports.register = async(req,res)=>{
 // login
 
 exports.login = async(req,res)=>{
-    console.log('Inside register controller function');
+    console.log('Inside login controller function');
     const {email,password} = req.body
        try{
          const existingUser = await users.findOne({email,password})
         if(existingUser){
-          res.status(200).json(existingUser); 
+            const token = jwt.sign({userId:existingUser._id},"supersecretkey12345")
+          res.status(200).json({
+            existingUser,token // means frontendilek response aayitt server existingUserine kodukkunathinte koode token koodi kodukkunu
+        }); 
         }else{
-             res.status(406).json("Incorrect email or password");
+             res.status(406).json("Incorrect Email or Password");
         }
     }
     catch(err){
-        res.status(401).json(`Register API Failed , Error: ${err}`)
+        res.status(401).json(`Login API Failed , Error: ${err}`)
     }
     
 }
 
+// editUser
+exports.editUser = async(req,res)=>{
+    const userId = req.payload
+    const {username,email,password,github,linkedin,profile} = req.body
+    const uploadImage = req.file?req.file.filename:profile
+    try{
+        const updatedUser = await users.findByIdAndUpdate({_id:userId},{
+            username,email,password,github,linkedin,profile:uploadImage
+        },{new:true})
+        await updatedUser.save()
+        res.status(200).json(updatedUser)
+    }catch(err){
+        res.status(401).json(err)
+    }
+}
